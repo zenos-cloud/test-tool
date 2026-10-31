@@ -1,0 +1,4 @@
+# Không bao giờ đưa khóa bí mật lên GitHub
+.env
+state.json
+__pycache__/
