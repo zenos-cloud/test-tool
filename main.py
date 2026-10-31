@@ -60,6 +60,9 @@ class TelegramBot:
             return self.send(f"Chat ID của cậu: {chat_id}\nDán số này vào TELEGRAM_CHAT_ID trong .env", chat_id)
 
         # Chỉ chủ tài khoản mới được ra lệnh
+        if not self.chat_id:
+            return self.send(f"Chưa cài chủ bot. Chat ID của cậu: {chat_id}\n"
+                             f"Dán số này vào TELEGRAM_CHAT_ID trong .env rồi chạy lại bot.", chat_id)
         if chat_id != self.chat_id:
             return self.send("⛔ Cậu không có quyền dùng bot này.", chat_id)
 
@@ -101,7 +104,23 @@ class TelegramBot:
             elif job == "dca":
                 self.send(core.run_dca(self.client))
 
+    def check_token(self) -> bool:
+        """Hỏi Telegram xem token có đúng không, báo lỗi rõ ràng nếu sai."""
+        try:
+            data = requests.get(f"{self.api}/getMe", timeout=10).json()
+        except (requests.RequestException, ValueError) as e:
+            print("❌ Không kết nối được Telegram:", e)
+            return False
+        if not data.get("ok"):
+            print("❌ Token Telegram SAI hoặc đã bị /revoke.")
+            print("   Mở .env, dán lại token MỚI NHẤT từ BotFather vào TELEGRAM_BOT_TOKEN=")
+            return False
+        print(f"✅ Đã kết nối bot @{data['result']['username']}")
+        return True
+
     def run(self):
+        if not self.check_token():
+            return
         print(f"Bot đang chạy ({core.mode_label()}). Nhấn Ctrl+C để dừng.")
         if self.chat_id:
             self.send("✅ OKX Helper đã bật.\n" + status_text())
@@ -110,6 +129,7 @@ class TelegramBot:
                 self.offset = upd["update_id"] + 1
                 msg = upd.get("message") or {}
                 if "text" in msg:
+                    print(f"📩 Nhận tin từ {msg['chat']['id']}: {msg['text']}")
                     self.handle(str(msg["chat"]["id"]), msg["text"])
             if self.chat_id:
                 self.run_scheduled()
